@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Sistema con Login Seguro</title>
+</head>
+<body>
+
+<script>
+let authData = new Map();
+const maxLoginFailedAttempts = 3;
+
+function isPasswordSecure(password) {
+  const lengthValid = password.length >= 8 && password.length <= 16;
+  const hasUppercase = /[A-Z]/.test(password);
+  const symbolMatches = password.match(/[^a-zA-Z0-9]/g);
+  const hasTwoSymbols = symbolMatches && symbolMatches.length >= 2;
+
+  return lengthValid && hasUppercase && hasTwoSymbols;
+}
+
+function authenticateUser(username, password) {
+  const userdata = authData.get(username);
+
+  if (!userdata) {
+    return { status: false, result: 'USER_PASSWORD_FAILED' };
+  }
+
+  if (userdata.isLocked) {
+    return { status: false, result: 'BLOCKED_USER' };
+  }
+
+  if (userdata.password === password) {
+    userdata.failedLoginCounter = 0;
+    return { status: true, result: `¡Bienvenido/a ${username}!` };
+  }
+
+  userdata.failedLoginCounter++;
+  if (userdata.failedLoginCounter >= maxLoginFailedAttempts) {
+    userdata.isLocked = true;
+    return { status: false, result: 'BLOCKED_USER' };
+  }
+
+  return { status: false, result: 'USER_PASSWORD_FAILED' };
+}
+
+function cambiarContraseña(username) {
+  const nuevaPass = prompt("Ingrese nueva contraseña:\n(Mín. 8, Máx. 16 caracteres, 1 mayúscula y 2 símbolos especiales)");
+  if (!isPasswordSecure(nuevaPass)) {
+    alert("Contraseña no válida. Debe cumplir con los requisitos.");
+    return;
+  }
+
+  authData.get(username).password = nuevaPass;
+  alert("Contraseña cambiada exitosamente.");
+}
+
+function menuUsuario(username) {
+  let opcion;
+  do {
+    opcion = prompt(`Bienvenido/a ${username}\n1. Cambiar contraseña\n2. Cerrar sesión`);
+
+    if (opcion === "1") {
+      cambiarContraseña(username);
+    }
+
+  } while (opcion !== "2");
+}
+
+function login() {
+  const username = prompt("Ingrese su nombre de usuario:");
+  const password = prompt("Ingrese su contraseña:");
+
+  const result = authenticateUser(username, password);
+
+  switch (result.result) {
+    case 'BLOCKED_USER':
+      alert("Usuario bloqueado. Contacte al administrador.");
+      break;
+    case 'USER_PASSWORD_FAILED':
+      alert("Usuario o contraseña incorrecta.");
+      break;
+    default:
+      alert(result.result);
+      menuUsuario(username);
+      break;
+  }
+}
+
+function crearCuenta() {
+  const username = prompt("Ingrese un nombre de usuario:");
+
+  if (authData.has(username)) {
+    alert("Ese usuario ya existe.");
+    return;
+  }
+
+  const password = prompt("Ingrese una contraseña segura:\n(Mín. 8, Máx. 16 caracteres, 1 mayúscula y 2 símbolos especiales)");
+
+  if (!isPasswordSecure(password)) {
+    alert("Contraseña no válida. Debe cumplir con los requisitos.");
+    return;
+  }
+
+  authData.set(username, {
+    password: password,
+    failedLoginCounter: 0,
+    isLocked: false
+  });
+
+  alert(`Cuenta creada exitosamente para ${username}`);
+}
+
+function mainMenu() {
+  let opcion;
+  do {
+    opcion = prompt("=== Menú Principal ===\n1. Iniciar sesión\n2. Crear cuenta\n3. Salir");
+
+    switch (opcion) {
+      case "1":
+        login();
+        break;
+      case "2":
+        crearCuenta();
+        break;
+      case "3":
+        alert("Gracias por usar el sistema.");
+        break;
+      default:
+        alert("Opción inválida.");
+    }
+
+  } while (opcion !== "3");
+}
+
+// Usuarios iniciales
+authData.set("scorpion", { password: "987654", failedLoginCounter: 0, isLocked: false });
+authData.set("subZero", { password: "987654", failedLoginCounter: 0, isLocked: false });
+
+mainMenu();
+</script>
+
+</body>
+</html>

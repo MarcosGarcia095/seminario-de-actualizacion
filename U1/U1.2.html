@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8" />
+<title>Unidad 1</title>
+</head>
+
+<body>
+
+</body>
+
+<script type="text/javascript">
+
+let authData = new Map();
+const maxLoginFailedAttempts = 3;
+
+// Datos de usuarios
+let userData = [
+	{
+		password: '987654',
+		failedLoginCounter: 0,
+		isLocked: false
+	},
+	{
+		password: '987654',
+		failedLoginCounter: 0,
+		isLocked: false
+	}
+];
+
+// Carga de usuarios al Map
+authData.set('scorpion', userData[0]);
+authData.set('subZero', userData[1]);
+
+function isValidUserGetData(username) {
+	return authData.get(username);
+}
+
+function authenticateUser(username, password) {
+	let api_return = {
+		status: false,
+		result: null
+	};
+
+	if (username && password) {
+		let userdata = isValidUserGetData(username);
+
+		if (userdata) {
+			if (!userdata.isLocked) {
+				if (userdata.password === password) {
+					api_return.status = true;
+					api_return.result = `¡Bienvenido/a ${username}!`;
+				} else {
+					userdata.failedLoginCounter++;
+
+					if (userdata.failedLoginCounter >= maxLoginFailedAttempts) {
+						userdata.isLocked = true;
+						api_return.result = 'BLOCKED_USER';
+					} else {
+						api_return.result = 'USER_PASSWORD_FAILED';
+					}
+				}
+			} else {
+				api_return.result = 'BLOCKED_USER';
+			}
+		} else {
+			api_return.result = 'USER_PASSWORD_FAILED'; // Usuario no encontrado
+		}
+	}
+	return api_return;
+}
+
+function GUI_login() {
+	let username = window.prompt("Ingrese su nombre de usuario:");
+	let password = window.prompt("Ingrese contraseña:");
+
+	let api_return = authenticateUser(username, password);
+
+	if (api_return.status) {
+		alert(api_return.result); // Bienvenida
+		showUserMenu(username); // Mostrar menú tras login exitoso
+	} else {
+		switch (api_return.result) {
+			case 'BLOCKED_USER':
+				alert('Usuario bloqueado. Contacte al administrador');
+				break;
+			case 'USER_PASSWORD_FAILED':
+				alert('Usuario y/o contraseña incorrecta');
+				break;
+			default:
+				alert('Error desconocido');
+				break;
+		}
+	}
+
+	return api_return;
+}
+
+// Menú de usuario post-login
+function showUserMenu(username) {
+	let exitMenu = false;
+
+	while (!exitMenu) {
+		let opcion = window.prompt(
+			`Menú de opciones para ${username}:\n` +
+			"1. Cambiar contraseña\n" +
+			"2. Salir"
+		);
+
+		switch (opcion) {
+			case '1':
+				let newPassword = window.prompt("Ingrese nueva contraseña:");
+				if (newPassword && newPassword.trim() !== "") {
+					let userData = isValidUserGetData(username);
+					userData.password = newPassword;
+					alert("Contraseña cambiada exitosamente.");
+				} else {
+					alert("Contraseña no válida.");
+				}
+				break;
+
+			case '2':
+				alert("Sesión finalizada. Regresando al login.");
+				exitMenu = true;
+				break;
+
+			default:
+				alert("Opción no válida.");
+		}
+	}
+}
+
+// Flujo principal
+function main() {
+	while (true) {
+		let result = GUI_login();
+
+		if (result.status || result.result === 'BLOCKED_USER') {
+			// Vuelve a login o sale si está bloqueado
+			continue;
+		}
+	}
+}
+
+window.onload = main;
+
+</script>
+
+</html>
