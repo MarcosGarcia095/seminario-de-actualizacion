@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Venta de productos de limpieza</title>
+</head>
+<body>
+<script>
+const authData = new Map();
+const productos = new Map();
+const maxLoginFailedAttempts = 3;
+
+function initProductos() {
+  productos.set(1, { nombre: "Lavandina x 1L", precio: 875.25, stock: 3000 });
+  productos.set(4, { nombre: "Detergente x 500mL", precio: 1102.45, stock: 2010 });
+  productos.set(22, { nombre: "Jabón en polvo x 250g", precio: 650.22, stock: 407 });
+}
+
+function validarPassword(password) {
+  const esValida = /^[A-Za-z\d@$!%*?&]{8,16}$/.test(password)
+    && /[A-Z]/.test(password)
+    && /[^A-Za-z\d\s]{2,}/.test(password);
+  return esValida;
+}
+
+function crearCuenta() {
+  const username = prompt("Ingrese nuevo nombre de usuario:");
+  if (authData.has(username)) {
+    alert("Ese nombre de usuario ya existe.");
+    return;
+  }
+
+  const password = prompt("Ingrese una contraseña segura:\n(8-16 caracteres, al menos 1 mayúscula y 2 símbolos especiales)");
+  if (!validarPassword(password)) {
+    alert("La contraseña no cumple con los requisitos.");
+    return;
+  }
+
+  const tipo = prompt("Ingrese tipo de usuario (administrador, cliente, vendedor, deposito):").toLowerCase();
+  const tiposValidos = ["administrador", "cliente", "vendedor", "deposito"];
+  if (!tiposValidos.includes(tipo)) {
+    alert("Tipo de usuario inválido.");
+    return;
+  }
+
+  authData.set(username, {
+    password,
+    tipo,
+    failedLoginCounter: 0,
+    isLocked: false
+  });
+
+  alert("Cuenta creada exitosamente.");
+}
+
+function login() {
+  const username = prompt("Nombre de usuario:");
+  const user = authData.get(username);
+
+  if (!user) {
+    alert("Usuario no encontrado.");
+    return;
+  }
+
+  if (user.isLocked) {
+    alert("Usuario bloqueado. Contacte al administrador.");
+    return;
+  }
+
+  const password = prompt("Contraseña:");
+  if (user.password === password) {
+    user.failedLoginCounter = 0;
+    alert(`¡Bienvenido/a ${username} (${user.tipo})!`);
+    menuPorRol(username);
+  } else {
+    user.failedLoginCounter++;
+    if (user.failedLoginCounter >= maxLoginFailedAttempts) {
+      user.isLocked = true;
+      alert("Usuario bloqueado. Contacte al administrador.");
+    } else {
+      alert("Usuario y/o contraseña incorrecta.");
+    }
+  }
+}
+
+function listarArticulos() {
+  if (productos.size === 0) {
+    alert("No hay artículos cargados.");
+    return;
+  }
+
+  let lista = "=== Artículos ===\n";
+  productos.forEach((art, id) => {
+    lista += `ID: ${id} | ${art.nombre} | $${art.precio.toFixed(2)} | Stock: ${art.stock}\n`;
+  });
+  alert(lista);
+}
+
+function nuevoArticulo() {
+  const id = parseInt(prompt("Ingrese ID nuevo:"), 10);
+  if (productos.has(id)) {
+    alert("Ese ID ya existe.");
+    return;
+  }
+
+  const nombre = prompt("Nombre del artículo:");
+  const precio = parseFloat(prompt("Precio:"));
+  const stock = parseInt(prompt("Stock inicial:"), 10);
+
+  if (!nombre || isNaN(precio) || isNaN(stock)) {
+    alert("Datos inválidos.");
+    return;
+  }
+
+  productos.set(id, { nombre, precio, stock });
+  alert("Artículo creado.");
+}
+
+function editarArticulo() {
+  const id = parseInt(prompt("ID del artículo a editar:"), 10);
+  if (!productos.has(id)) {
+    alert("Artículo no encontrado.");
+    return;
+  }
+
+  const articulo = productos.get(id);
+  const nuevoNombre = prompt(`Nuevo nombre [${articulo.nombre}]:`) || articulo.nombre;
+  const nuevoPrecio = parseFloat(prompt(`Nuevo precio [${articulo.precio}]:`)) || articulo.precio;
+  const nuevoStock = parseInt(prompt(`Nuevo stock [${articulo.stock}]:`), 10);
+
+  if (!nuevoNombre || isNaN(nuevoPrecio) || isNaN(nuevoStock)) {
+    alert("Datos inválidos.");
+    return;
+  }
+
+  productos.set(id, { nombre: nuevoNombre, precio: nuevoPrecio, stock: nuevoStock });
+  alert("Artículo editado.");
+}
+
+function eliminarArticulo() {
+  const id = parseInt(prompt("ID del artículo a eliminar:"), 10);
+  if (!productos.has(id)) {
+    alert("Artículo no encontrado.");
+    return;
+  }
+
+  const confirmacion = confirm("¿Está seguro de eliminar el artículo?");
+  if (confirmacion) {
+    productos.delete(id);
+    alert("Artículo eliminado.");
+  } else {
+    alert("Operación cancelada.");
+  }
+}
+
+function comprarArticulo() {
+  const id = parseInt(prompt("Ingrese ID del artículo a comprar:"), 10);
+  if (!productos.has(id)) {
+    alert("Artículo no encontrado.");
+    return;
+  }
+
+  const articulo = productos.get(id);
+  alert(`Seleccionó: ${articulo.nombre} - Precio: $${articulo.precio.toFixed(2)} - Stock: ${articulo.stock}`);
+  const cantidad = parseInt(prompt("Ingrese cantidad a comprar:"), 10);
+
+  if (isNaN(cantidad) || cantidad <= 0) {
+    alert("Cantidad inválida.");
+    return;
+  }
+
+  if (cantidad > articulo.stock) {
+    alert("Stock insuficiente.");
+    return;
+  }
+
+  const confirmar = confirm(`¿Confirmar compra de ${cantidad} unidad/es por $${(cantidad * articulo.precio).toFixed(2)}?`);
+  if (confirmar) {
+    articulo.stock -= cantidad;
+    alert(`Compra exitosa. Stock restante: ${articulo.stock}`);
+  } else {
+    alert("Compra cancelada.");
+  }
+}
+
+function cambiarPassword(usuario) {
+  const user = authData.get(usuario);
+  const nuevaPassword = prompt("Ingrese nueva contraseña:");
+
+  if (!validarPassword(nuevaPassword)) {
+    alert("Contraseña no válida.");
+    return;
+  }
+
+  user.password = nuevaPassword;
+  alert("Contraseña actualizada.");
+}
+
+function menuPorRol(usuario) {
+  const user = authData.get(usuario);
+  const tipo = user.tipo;
+
+  let opcion;
+  do {
+    let opciones = "=== Menú (" + tipo + ") ===\n";
+    let disponibles = [];
+
+    opciones += "1. Listar artículos\n";
+    disponibles.push("1");
+
+    opciones += "2. Comprar artículo\n";
+    disponibles.push("2");
+
+    if (tipo === "administrador" || tipo === "deposito") {
+      opciones += "3. Nuevo artículo\n4. Editar artículo\n5. Eliminar artículo\n";
+      disponibles.push("3", "4", "5");
+    }
+
+    opciones += "6. Cambiar contraseña\n7. Cerrar sesión";
+
+    opcion = prompt(opciones);
+
+    switch (opcion) {
+      case "1": listarArticulos(); break;
+      case "2": comprarArticulo(); break;
+      case "3": if (disponibles.includes("3")) nuevoArticulo(); else alert("Acceso denegado."); break;
+      case "4": if (disponibles.includes("4")) editarArticulo(); else alert("Acceso denegado."); break;
+      case "5": if (disponibles.includes("5")) eliminarArticulo(); else alert("Acceso denegado."); break;
+      case "6": cambiarPassword(usuario); break;
+      case "7": alert("Cerrando sesión..."); break;
+      default: alert("Opción inválida.");
+    }
+
+  } while (opcion !== "7");
+}
+
+function mainMenu() {
+  let opcion;
+  do {
+    opcion = prompt(
+      "=== Menú Principal ===\n" +
+      "1. Iniciar sesión\n" +
+      "2. Crear cuenta\n" +
+      "3. Salir"
+    );
+
+    switch (opcion) {
+      case "1": login(); break;
+      case "2": crearCuenta(); break;
+      case "3": alert("Saliendo del sistema..."); break;
+      default: alert("Opción inválida.");
+    }
+
+  } while (opcion !== "3");
+}
+
+window.onload = function() {
+  initProductos();
+  // Cuentas iniciales para cada tipo
+  authData.set("admin1", { password: "Admin@123!", tipo: "administrador", failedLoginCounter: 0, isLocked: false });
+  authData.set("cliente1", { password: "Cliente@123!", tipo: "cliente", failedLoginCounter: 0, isLocked: false });
+  authData.set("vendedor1", { password: "Vendedor@123!", tipo: "vendedor", failedLoginCounter: 0, isLocked: false });
+  authData.set("deposito1", { password: "Deposito@123!", tipo: "deposito", failedLoginCounter: 0, isLocked: false });
+
+  mainMenu();
+};
+</script>
+</body>
+</html>

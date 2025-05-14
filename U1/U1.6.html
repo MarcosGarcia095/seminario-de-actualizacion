@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Sistema con Login y CRUD</title>
+</head>
+<body>
+
+<script>
+let authData = new Map();
+const maxLoginFailedAttempts = 3;
+
+// === Artículos ===
+const productos = new Map([
+  [1, { nombre: "Lavandina x 1L", precio: 875.25, stock: 3000 }],
+  [4, { nombre: "Detergente x 500mL", precio: 1102.45, stock: 2010 }],
+  [22, { nombre: "Jabón en polvo x 250g", precio: 650.22, stock: 407 }]
+]);
+
+let nextProductId = 23; // Siguiente ID disponible para nuevos artículos
+
+function isPasswordSecure(password) {
+  const lengthValid = password.length >= 8 && password.length <= 16;
+  const hasUppercase = /[A-Z]/.test(password);
+  const symbolMatches = password.match(/[^a-zA-Z0-9]/g);
+  const hasTwoSymbols = symbolMatches && symbolMatches.length >= 2;
+  return lengthValid && hasUppercase && hasTwoSymbols;
+}
+
+function authenticateUser(username, password) {
+  const userdata = authData.get(username);
+  if (!userdata) return { status: false, result: 'USER_PASSWORD_FAILED' };
+  if (userdata.isLocked) return { status: false, result: 'BLOCKED_USER' };
+
+  if (userdata.password === password) {
+    userdata.failedLoginCounter = 0;
+    return { status: true, result: `¡Bienvenido/a ${username}!` };
+  }
+
+  userdata.failedLoginCounter++;
+  if (userdata.failedLoginCounter >= maxLoginFailedAttempts) {
+    userdata.isLocked = true;
+    return { status: false, result: 'BLOCKED_USER' };
+  }
+
+  return { status: false, result: 'USER_PASSWORD_FAILED' };
+}
+
+function cambiarContraseña(username) {
+  const nuevaPass = prompt("Ingrese nueva contraseña:\n(Mín. 8, Máx. 16 caracteres, 1 mayúscula y 2 símbolos especiales)");
+  if (!isPasswordSecure(nuevaPass)) {
+    alert("Contraseña no válida. Debe cumplir con los requisitos.");
+    return;
+  }
+  authData.get(username).password = nuevaPass;
+  alert("Contraseña cambiada exitosamente.");
+}
+
+function menuUsuario(username) {
+  let opcion;
+  do {
+    opcion = prompt(`Bienvenido/a ${username}\n1. Cambiar contraseña\n2. Cerrar sesión`);
+
+    if (opcion === "1") {
+      cambiarContraseña(username);
+    }
+
+  } while (opcion !== "2");
+}
+
+function login() {
+  const username = prompt("Ingrese su nombre de usuario:");
+  const password = prompt("Ingrese su contraseña:");
+
+  const result = authenticateUser(username, password);
+
+  switch (result.result) {
+    case 'BLOCKED_USER':
+      alert("Usuario bloqueado. Contacte al administrador.");
+      break;
+    case 'USER_PASSWORD_FAILED':
+      alert("Usuario o contraseña incorrecta.");
+      break;
+    default:
+      alert(result.result);
+      menuUsuario(username);
+      break;
+  }
+}
+
+function crearCuenta() {
+  const username = prompt("Ingrese un nombre de usuario:");
+  if (authData.has(username)) {
+    alert("Ese usuario ya existe.");
+    return;
+  }
+
+  const password = prompt("Ingrese una contraseña segura:\n(Mín. 8, Máx. 16 caracteres, 1 mayúscula y 2 símbolos especiales)");
+  if (!isPasswordSecure(password)) {
+    alert("Contraseña no válida. Debe cumplir con los requisitos.");
+    return;
+  }
+
+  authData.set(username, {
+    password: password,
+    failedLoginCounter: 0,
+    isLocked: false
+  });
+
+  alert(`Cuenta creada exitosamente para ${username}`);
+}
+
+// === CRUD de artículos ===
+function listarArticulos() {
+  if (productos.size === 0) {
+    alert("No hay artículos cargados.");
+    return;
+  }
+
+  let listado = "=== Artículos ===\n";
+  productos.forEach((prod, id) => {
+    listado += `ID: ${id} | ${prod.nombre} | $${prod.precio.toFixed(2)} | Stock: ${prod.stock}\n`;
+  });
+  alert(listado);
+}
+
+function nuevoArticulo() {
+  const nombre = prompt("Nombre del artículo:");
+  const precio = parseFloat(prompt("Precio del artículo:"));
+  const stock = parseInt(prompt("Stock inicial del artículo:"), 10);
+
+  if (!nombre || isNaN(precio) || isNaN(stock)) {
+    alert("Datos inválidos.");
+    return;
+  }
+
+  productos.set(nextProductId++, { nombre, precio, stock });
+  alert("Artículo agregado correctamente.");
+}
+
+function editarArticulo() {
+  const id = parseInt(prompt("Ingrese ID del artículo a editar:"), 10);
+  if (!productos.has(id)) {
+    alert("Artículo no encontrado.");
+    return;
+  }
+
+  const articulo = productos.get(id);
+  const nuevoNombre = prompt(`Nombre actual: ${articulo.nombre}\nNuevo nombre:`, articulo.nombre);
+  const nuevoPrecio = parseFloat(prompt(`Precio actual: ${articulo.precio}\nNuevo precio:`, articulo.precio));
+  const nuevoStock = parseInt(prompt(`Stock actual: ${articulo.stock}\nNuevo stock:`, articulo.stock), 10);
+
+  if (!nuevoNombre || isNaN(nuevoPrecio) || isNaN(nuevoStock)) {
+    alert("Datos inválidos.");
+    return;
+  }
+
+  productos.set(id, { nombre: nuevoNombre, precio: nuevoPrecio, stock: nuevoStock });
+  alert("Artículo editado correctamente.");
+}
+
+function eliminarArticulo() {
+  const id = parseInt(prompt("Ingrese ID del artículo a eliminar:"), 10);
+  if (!productos.has(id)) {
+    alert("Artículo no encontrado.");
+    return;
+  }
+
+  productos.delete(id);
+  alert("Artículo eliminado correctamente.");
+}
+
+function mainMenu() {
+  let opcion;
+  do {
+    opcion = prompt(
+      "=== Menú Principal ===\n" +
+      "1. Iniciar sesión\n" +
+      "2. Crear cuenta\n" +
+      "3. Listar artículos\n" +
+      "4. Nuevo artículo\n" +
+      "5. Editar artículo\n" +
+      "6. Eliminar artículo\n" +
+      "7. Salir"
+    );
+
+    switch (opcion) {
+      case "1": login(); break;
+      case "2": crearCuenta(); break;
+      case "3": listarArticulos(); break;
+      case "4": nuevoArticulo(); break;
+      case "5": editarArticulo(); break;
+      case "6": eliminarArticulo(); break;
+      case "7": alert("Gracias por usar el sistema."); break;
+      default: alert("Opción inválida.");
+    }
+
+  } while (opcion !== "7");
+}
+
+// Usuarios iniciales
+authData.set("scorpion", { password: "987654", failedLoginCounter: 0, isLocked: false });
+authData.set("subZero", { password: "987654", failedLoginCounter: 0, isLocked: false });
+
+mainMenu();
+</script>
+
+</body>
+</html>
