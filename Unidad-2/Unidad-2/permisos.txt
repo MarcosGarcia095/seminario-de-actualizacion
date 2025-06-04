@@ -1,0 +1,7 @@
+El administrador esta habilitado a listar articulos y a crear , editar o eliminar a los mismos.
+
+El vendedor esta habilitado a listar y manipular los articulos.
+
+El trabajador de deposito esta habilitado a listar los articulos.
+
+El cliente esta habilitado a comprar articulos.
