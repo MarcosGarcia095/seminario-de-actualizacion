@@ -1,4 +1,5 @@
-export class ApplicationModel {
+export class ApplicationModel 
+{
   constructor() {
     this.authData = new Map();
     this.productos = new Map();

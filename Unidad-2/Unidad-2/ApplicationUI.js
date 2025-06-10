@@ -1,4 +1,5 @@
-export class ApplicationUI {
+export class ApplicationUI 
+{
   constructor(model) {
     this.model = model;
   }
